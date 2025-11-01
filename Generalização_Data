@@ -8,15 +8,15 @@ df['dataNascimento'] = pd.to_datetime(df['dataNascimento'], errors='coerce')
 df['dataNascimento'] = pd.to_datetime(df['dataNascimento'])
 def generalizar(df):
 
-    print("Informe a porcentagem de cada nível de generalização (total deve somar 100%)")
-    n0 = float(input("Nível 0 (dia/mês/ano): "))
-    n1 = float(input("Nível 1 (mês/ano): "))
-    n2 = float(input("Nível 2 (ano): "))
+    print("Informe a porcentagem de cada nível de generalização (total deve somar 100)")
+    n0 = float(input("Nível 0 (dia/mês/ano): (Exemplo: 20,30, 40)"))
+    n1 = float(input("Nível 1 (mês/ano): (Exemplo: 20,30, 40)"))
+    n2 = float(input("Nível 2 (ano): (Exemplo: 20,30, 40)"))
 
     # Verificar se realmente o total daa 100% do dataframe
     total = n0 + n1 + n2
     if total != 100:
-        print(f"❌ A soma deve ser 100%, mas foi {total}%. Tente novamente.")
+        print(f"A soma deve ser 100, mas foi {total}.")
         return
 
     # Cria uma cópia
@@ -47,7 +47,7 @@ def generalizar(df):
     df_copy.loc[index1, 'dataNascimento'] = valn1
     df_copy.loc[index2, 'dataNascimento'] = valn2
 
-    print("\n✅ Generalização aplicada com sucesso!")
+    print("Generalização")
     print(f"- Nível 0: {line_n0} linhas ({n0}%)")
     print(f"- Nível 1: {line_n1} linhas ({n1}%)")
     print(f"- Nível 2: {line_n2} linhas ({n2}%)")
