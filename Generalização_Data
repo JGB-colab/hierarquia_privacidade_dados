@@ -3,15 +3,15 @@ import numpy as np
 
 # Carregar o dataframe
 
-df = pd.read_csv('/content/dados_covid-ce_trab02.csv', encoding='latin-1')
+df = pd.read_csv('dados_covid-ce_trab02.csv', encoding='latin-1')
 df['dataNascimento'] = pd.to_datetime(df['dataNascimento'], errors='coerce')
 df['dataNascimento'] = pd.to_datetime(df['dataNascimento'])
 def generalizar(df):
 
     print("Informe a porcentagem de cada nível de generalização (total deve somar 100)")
-    n0 = float(input("Nível 0 (dia/mês/ano): (Exemplo: 20,30, 40)"))
-    n1 = float(input("Nível 1 (mês/ano): (Exemplo: 20,30, 40)"))
-    n2 = float(input("Nível 2 (ano): (Exemplo: 20,30, 40)"))
+    n0 = float(input("Nível 0 (dia/mês/ano): (Exemplo: 20,30, 40) : "))
+    n1 = float(input("Nível 1 (mês/ano): (Exemplo: 20,30, 40) : "))
+    n2 = float(input("Nível 2 (ano): (Exemplo: 20,30, 40): "))
 
     # Verificar se realmente o total daa 100% do dataframe
     total = n0 + n1 + n2
@@ -51,7 +51,7 @@ def generalizar(df):
     print(f"- Nível 0: {line_n0} linhas ({n0}%)")
     print(f"- Nível 1: {line_n1} linhas ({n1}%)")
     print(f"- Nível 2: {line_n2} linhas ({n2}%)")
-    display(df_copy['dataNascimento'])
+    print(df_copy['dataNascimento'])
     return df_copy
 
 # Executar
