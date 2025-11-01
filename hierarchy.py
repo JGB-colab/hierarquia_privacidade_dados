@@ -10,7 +10,7 @@ class Hierarchy:
         self.set_quantity_levels = 5
         self.control_structure = False
     
-    def construct_hierarchy_attr(self, definitions_levels : list ,column_name: str, qty_values: int) -> None:
+    def construct_hierarchy_attr(self, definitions_levels : list ,column_name: str) -> None:
         self.set_quantity_levels = len(definitions_levels)
         try:
             os.mkdir(self.root)
@@ -24,7 +24,7 @@ class Hierarchy:
        
         # valores dos atributos são os mesmos  
         values = sorted(column_df[f'{column_name}'].dropna().unique())
-        self.ni = qty_values
+        #self.ni = qty_values
         
         json_level = {f'nivel_{level}': None for level in range(self.set_quantity_levels)}
         interval_map_level = []
@@ -67,7 +67,6 @@ class Hierarchy:
             return [(1,max(array))]
         else:
             for index in range(0,length,step):
-                print('pf anterior: ',pf + step + rest,length)
                 if pf + step + rest == length:
                     pi =  index
                     pf =  len(array) - 1
@@ -76,12 +75,11 @@ class Hierarchy:
                 else:
                     pi =  index
                     pf =  index + step
-                    print(pi,pf)
                     select_pivots.append((array[pi],array[pf])) 
             
     def apply_hierarchy(self, level: int, column_name: str = 'idadeCaso', ):
-        column_df = pd.read_csv(self.file_csv, usecols = [f'{column_name}'])      
-        
+        column_df = pd.read_csv(self.file_csv, usecols = [f'{column_name}'])  
+        columns_suport = []    
         if level == 0:
            columns_suport = column_df 
         elif level == self.ni:
@@ -94,10 +92,24 @@ class Hierarchy:
                 levels = json.load(fr)
             columns_suport = [] 
             for element_c in column_df.values:
-                for element_l in levels[f'nivel_{self.ni}'].values():
-                      if element_l[0] <= element_c <= element_l[1]:
+                find = False
+                if pd.isna(element_c):
+                    columns_suport.append(None) # Adiciona None ou um valor de erro
+                    continue # Pula para o próximo elemento
+                for element_l in levels[f'nivel_{level}'].values():
+                    if find:
+                        break
+                    if element_l[0] <= element_c <= element_l[1]:
                           columns_suport.append([element_l[0],element_l[1]])
-            column_df['idadeCaso'] =  columns_suport            
+                          find = True
+                if not find:
+                    # Adiciona um marcador (ex: [-1, -1] ou None) para garantir que a lista tenha o mesmo tamanho
+                    columns_suport.append([-1, -1] )  
+                
+            if len(columns_suport) != len(column_df):
+                 print(f"ERRO DE LÓGICA: Comprimento da lista de suporte ({len(columns_suport)}) não coincide com o DF ({len(column_df)}).")
+                 return          
+            column_df['idadeCaso'] = columns_suport            
         else:
             print('Nível inválido, você deve setar uma nova hierarquia')    
         column_df.to_csv(rf'data\Data_n_{level}.csv')
@@ -110,8 +122,8 @@ def main():
   h = Hierarchy(4, 4) 
   pattern = [1, 5, 10, 20, 'all']  # padrão
   
-  h.construct_hierarchy_attr(pattern, 'idadeCaso',0)
+  h.construct_hierarchy_attr(pattern, 'idadeCaso')
   while True:
     nivel = int(input('Defina a hierarquia desejada: '))
-    h.apply_hierarchy(nivel)
+    h.apply_hierarchy(level=int(nivel))
 main()
