@@ -30,7 +30,7 @@ def generalizar(df):
     line_n2 = n - line_n0 - line_n1 # Calculate line_n2 to account for potential rounding issues
 
     #Cria um index para classificar o nivel de acordo com a quantidade de linhas que é preciso.
-    index0 = df_copy.index[:line_n0]#Totas as linhas até a quantidade de linhas de nivel0
+    index0 = df_copy.index[:line_n0] #Totas as linhas até a quantidade de linhas de nivel0
     index1 = df_copy.index[line_n0:line_n0+line_n1]#A partir do line_n0 preenche com o nivel 1 até o line_n0+line_n1
     index2 = df_copy.index[line_n0+line_n1:line_n0+line_n1+line_n2]#Todas as linhas após line_n0 + line_n1, preenche com o nivel2
 

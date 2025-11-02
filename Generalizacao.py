@@ -1,182 +1,304 @@
 import pandas as pd
 import os 
 import json
+import calendar
 class Hierarchy: 
-    def __init__(self, ni, nd) -> None:
+    def __init__(self, dataframe: pd.DataFrame, ni: int, nd: int) -> None:
+        """
+        Inicializa a classe Hierarchy.
+
+        Args:
+            dataframe (pd.DataFrame): O DataFrame original para ser processado.
+            ni (int): O nível de hierarquia desejado para o atributo numérico (idade).
+            nd (int): O nível de hierarquia desejado para o atributo de data.
+        """
+        self.df = dataframe.copy() # Usar uma cópia para evitar modificar o original
         self.ni = ni
-        #self.nd = nd
+        self.nd = nd
         self.root = r'data'
-        self.file_csv = r'dados_covid-ce_trab02.csv'
-        self.set_quantity_levels = 5
-        self.control_structure = False
+        self.json_file = 'levels.json'
+        self.set_quantity_levels = 0
 
-    def chamada(self):
-        print("Digite: 1 para Sim e 0 para Não")
-        idade = float(input("Deseja generalizar idade"))
-        data = float(input("Deseja generalizar data de Nascimento"))
-        if idade == 1:
-            pass
-        if data == 1:
-            Hierarchy.generalizar()
+    def construct_hierarchy_attr(self, definitions_levels: list, column_name: str) -> None:
+        """
+        Constrói a hierarquia para um atributo (coluna) e a salva em um arquivo JSON.
 
-    def construct_hierarchy_attr(self, definitions_levels : list ,column_name: str) -> None:
+        Args:
+            definitions_levels (list): Uma lista que define como cada nível será dividido.
+                                       Ex: [1, 5, 10, 'all'] significa 4 níveis de generalização.
+            column_name (str): O nome da coluna para a qual a hierarquia será criada.
+        """
         self.set_quantity_levels = len(definitions_levels)
+        
         try:
-            os.mkdir(self.root)
-            print(f"Pasta '{self.root}' criada com sucesso!")
-        except FileExistsError:
-            print(f"A pasta '{self.root}' já existe.")
+            os.makedirs(self.root, exist_ok=True) 
         except Exception as e:
-            print(f"Ocorreu um erro: {e}")
-
-        column_df = pd.read_csv(self.file_csv, usecols = [f'{column_name}'])
-       
-        # valores dos atributos são os mesmos  
-        values = sorted(column_df[f'{column_name}'].dropna().unique())
-        #self.ni = qty_values
-        
-        json_level = {f'nivel_{level}': None for level in range(self.set_quantity_levels)}
-        interval_map_level = []
-        
-        with open('levels.json','w',encoding='utf-8') as f:
-              json.dump(json_level, f, ensure_ascii = False, indent = 4)
-        
-        for steps in definitions_levels:
-             
-            try:
-                integer_part = len(values)//(steps)
-                rest_part = len(values)%(steps)
-                print('Executando parte inteira:',integer_part )
-                interval_map_level.append(self.compute_pivot(values,integer_part,rest_part))    
-            except TypeError:
-                interval_map_level.append(self.compute_pivot(values,'all',rest_part) )
-
-        with open('levels.json','r',encoding='utf-8') as fr:
-            levels = json.load(fr) 
-        fw = open('levels.json','w',encoding='utf-8')
-        for h in range(len(interval_map_level)): # h é hierarquia construídas
-            json_values = {} 
-            for index_h in range(len(interval_map_level[h])):
-                json_values[f'{index_h + 1}'] = interval_map_level[h][index_h]
-            levels[f'nivel_{h}'] = json_values
-        json.dump(levels, fw, ensure_ascii = False, indent = 4 )
-        f.close()    
-    def compute_pivot(self, array: list, step: int, rest: int):
-        select_pivots = []
-        length = len(array)
-        pi = 0
-        pf = 0
-       
-        # caso intermediario
-        # caso final(máximo)
-        # caso inicial(mínimo)
-        if step == len(array):
-            return [array[i] for i in range(0, len(array))] 
-        elif step == 'all':
-            return [(1,max(array))]
-        else:
-            for index in range(0,length,step):
-                if pf + step + rest == length:
-                    pi =  index
-                    pf =  len(array) - 1
-                    select_pivots.append((array[pi],array[pf])) 
-                    return select_pivots
-                else:
-                    pi =  index
-                    pf =  index + step
-                    select_pivots.append((array[pi],array[pf])) 
-            
-    def apply_hierarchy(self, level: int, column_name: str = 'idadeCaso', ):
-        column_df = pd.read_csv(self.file_csv, usecols = [f'{column_name}'])  
-        columns_suport = []    
-        if level == 0:
-           columns_suport = column_df 
-        elif level == self.ni:
-           with open('levels.json','r',encoding='utf-8') as fr:
-                levels = json.load(fr) 
-           columns_suport = column_df.apply(lambda row: levels[f'nivel_{self.ni}'])
-        
-        elif 0 < level < self.ni:
-            with open('levels.json','r',encoding='utf-8') as fr:
-                levels = json.load(fr)
-            columns_suport = [] 
-            for element_c in column_df.values:
-                find = False
-                if pd.isna(element_c):
-                    columns_suport.append(None) # Adiciona None ou um valor de erro
-                    continue # Pula para o próximo elemento
-                for element_l in levels[f'nivel_{level}'].values():
-                    if find:
-                        break
-                    if element_l[0] <= element_c <= element_l[1]:
-                          columns_suport.append([element_l[0],element_l[1]])
-                          find = True
-                if not find:
-                    # Adiciona um marcador (ex: [-1, -1] ou None) para garantir que a lista tenha o mesmo tamanho
-                    columns_suport.append([-1, -1] )  
-                
-            if len(columns_suport) != len(column_df):
-                 print(f"ERRO DE LÓGICA: Comprimento da lista de suporte ({len(columns_suport)}) não coincide com o DF ({len(column_df)}).")
-                 return          
-            column_df['idadeCaso'] = columns_suport            
-        else:
-            print('Nível inválido, você deve setar uma nova hierarquia')    
-        column_df.to_csv(rf'data\Data_n_{level}.csv')
-
-    def generalizar(self):
-
-        print("Informe a porcentagem de cada nível de generalização (total deve somar 100%)")
-        n0 = float(input("Nível 0 (dia/mês/ano): "))
-        n1 = float(input("Nível 1 (mês/ano): "))
-        n2 = float(input("Nível 2 (ano): "))
-
-        # Verificar se realmente o total daa 100% do dataframe
-        total = n0 + n1 + n2
-        if total != 100:
-            print(f"❌ A soma deve ser 100%, mas foi {total}%. Tente novamente.")
+            print(f"Ocorreu um erro ao criar a pasta: {e}")
             return
 
-        # Calcula o número de linhas para cada nível
-        n = len(df)
-        line_n0 = int(n * n0 / 100)
-        line_n1 = int(n * n1 / 100)
-        line_n2 = n - line_n0 - line_n1 # Calculate line_n2 to account for potential rounding issues
+        column_values = sorted(self.df[column_name].dropna().unique())
+        
+        # Estrutura inicial do JSON
+        json_level = {f'nivel_{level}': None for level in range(self.set_quantity_levels)}
+        
+        # Gera os intervalos para cada nível de definição
+        interval_map_level = []
+        for steps in definitions_levels:
+            interval_map_level.append(self.compute_pivot(column_values, steps))
+        
+        # Preenche a estrutura do JSON com os intervalos criados
+        for h, intervals in enumerate(interval_map_level):
+            json_values = {str(index + 1): interval for index, interval in enumerate(intervals)}
+            json_level[f'nivel_{h}'] = json_values
 
-        #Cria um index para classificar o nivel de acordo com a quantidade de linhas que é preciso.
-        index0 = df.index[:line_n0]#Totas as linhas até a quantidade de linhas de nivel0
-        index1 = df.index[line_n0:line_n0+line_n1]#A partir do line_n0 preenche com o nivel 1 até o line_n0+line_n1
-        index2 = df.index[line_n0+line_n1:line_n0+line_n1+line_n2]#Todas as linhas após line_n0 + line_n1, preenche com o nivel2
+        # Salva o dicionário completo no arquivo JSON
+        try:
+            with open(self.json_file, 'w', encoding='utf-8') as f:
+                json.dump(json_level, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            print(f"Erro ao salvar o arquivo JSON: {e}")
 
-        # Aplica as generalizações com base no index
-        valn0 = df.loc[index0, 'dataNascimento'].dt.strftime('%d/%m/%Y') #Localiza as linhas com o index do nivel 0 e aplica a generalização dia/mês/ano
-        valn1 = df.loc[index1, 'dataNascimento'].dt.strftime('%m/%Y') #Localiza as linhas com o index do nivel 1 e aplica a generalização mês/ano
-        valn2 = df.loc[index2, 'dataNascimento'].dt.strftime('%Y') ##Localiza as linhas com o index do nivel 2 e aplica a generalização ano
+    def compute_pivot(self, array: list, num_intervals: int | str):
+        """
+        Calcula os intervalos (pivots) para um array de valores. (LÓGICA CORRIGIDA)
 
-        # 2. Passar a coluna para 'object' para aceitar as strings
-        df['data_gen'] = pd.Series(dtype=object)
+        Args:
+            array (list): Lista de valores únicos e ordenados.
+            num_intervals (int | str): O número de intervalos a serem criados ou 'all' para um único intervalo.
 
-        # 3. Realizar a alteração na coluna (atribuindo as strings)
-        df.loc[index0, 'data_gen'] = valn0
-        df.loc[index1, 'data_gen'] = valn1
-        df.loc[index2, 'data_gen'] = valn2
+        Returns:
+            list: Uma lista de tuplas, onde cada tupla é um intervalo (min, max).
+        """
+        if not array:
+            return []
+        
+        if num_intervals == 'all':
+            return [(min(array), max(array))]
+        
+        if num_intervals == 1:
+            return [(val, val) for val in array]
 
-        print("\n✅ Generalização aplicada com sucesso!")
-        print(f"- Nível 0: {line_n0} linhas ({n0}%)")
-        print(f"- Nível 1: {line_n1} linhas ({n1}%)")
-        print(f"- Nível 2: {line_n2} linhas ({n2}%)")
-        return df
+        pivots = []
+        length = len(array)
+        
+        num_intervals = min(num_intervals, length)
+        
+        step = length // num_intervals
+        remainder = length % num_intervals
+        
+        start_index = 0
+        for i in range(num_intervals):
+            end_index = start_index + step + (1 if i < remainder else 0)
+            
+            # Garante que o índice final não ultrapasse o limite do array
+            # O -1 é porque o índice é baseado em zero
+            pivots.append((array[start_index], array[end_index - 1]))
+            
+            start_index = end_index
+            
+        return pivots
     
-def main():   
- 
+    def apply_age_hierarchy(self) -> pd.Series:
+        """
+        Aplica a hierarquia de idade definida no arquivo JSON.
 
-  print('##### Construção de Hierarquia #######')
-  print('Escreva como você deseja os níves de idade')
-  print("Exemplo: [1, 5, 10, 20, 'all']")
-  h = Hierarchy(4, 4) 
-  pattern = [1, 5, 10, 20, 'all']  # padrão
+        Returns:
+            pd.Series: Uma série do Pandas com os valores de idade generalizados.
+        """
+        column_name = 'idadeCaso'
+        level = self.ni
+
+        if level == 0:
+           # Nível 0 significa sem generalização, retorna os valores originais
+           return self.df[column_name]
+        
+        if not (0 < level < self.set_quantity_levels):
+            print(f'Nível {level} inválido. Escolha um nível entre 1 e {self.set_quantity_levels - 1}.')
+            return None
+        
+        try:
+            with open(self.json_file, 'r', encoding='utf-8') as fr:
+                levels_data = json.load(fr)
+        except FileNotFoundError:
+            print(f"Erro: Arquivo '{self.json_file}' não encontrado. Execute 'construct_hierarchy_attr' primeiro.")
+            return None
+
+        intervals = list(levels_data.get(f'nivel_{level}', {}).values())
+        if not intervals:
+            print(f"Nenhum intervalo encontrado para o nível {level} no JSON.")
+            return None
+
+        generalized_column = []
+        
+        for value in self.df[column_name]:
+            if pd.isna(value):
+                generalized_column.append(None)
+                continue
+            
+            found = False
+            for interval in intervals:
+                # O valor precisa ser tratado como numérico para comparação
+                if interval[0] <= float(value) <= interval[1]:
+                    generalized_column.append(f"{interval[0]}-{interval[1]}") # Formata como string para clareza
+                    found = True
+                    break
+            
+            if not found:
+                generalized_column.append('Fora do intervalo') # Caso um valor não se encaixe em nenhum intervalo
+
+        return pd.Series(generalized_column, name=f"{column_name}_gen_n{level}")
+
+    def apply_date_hierarchy(self) -> pd.Series:
+        """
+        Aplica a generalização na coluna de data de nascimento.
+        """
+        level = self.nd
+        column_name = 'dataNascimento'
+
+        date_series = pd.to_datetime(self.df[column_name], errors='coerce')
+        
+        generalized_dates = None
+        if level == 0:       
+            generalized_dates = date_series.dt.strftime('%d/%m/%Y')
+        elif level == 1:    
+            generalized_dates = date_series.dt.strftime('%m/%Y')
+        elif level == 2:    
+            generalized_dates = date_series.dt.strftime('%Y')
+        else:
+            print('Nível de data inválido. Escolha entre 0, 1 ou 2.')
+            return None
+
+        print(f"\n✅ Generalização de data (Nível {level}) aplicada com sucesso!")
+        return generalized_dates.rename(f"{column_name}_gen_n{level}")
+    def calculate_precision(self, generalized_df: pd.DataFrame) -> float:
+        """
+        Calcula a métrica de Precisão (Perda de Informação) para o DataFrame generalizado.
+
+        Args:
+            generalized_df (pd.DataFrame): O DataFrame contendo as colunas generalizadas.
+
+        Returns:
+            float: O valor da precisão, onde 1.0 é nenhuma perda de informação.
+        """
+        attributes = {'idadeCaso': 'idadeCaso_gen_n', 'dataNascimento': 'dataNascimento_gen_n'}
+        total_information_loss = 0.0
+        
+        num_records = len(self.df)
+        num_attributes = len(attributes)
+
+        for original_attr, generalized_attr_prefix in attributes.items():
+            # Encontra o nome completo da coluna generalizada
+            try:
+                gen_col_name = [c for c in generalized_df.columns if c.startswith(generalized_attr_prefix)][0]
+            except IndexError:
+                print(f"Aviso: Coluna generalizada para '{original_attr}' não encontrada.")
+                continue
+
+            # |HGV_Ai|: Tamanho do domínio original (número de valores únicos)
+            hgv_size = self.df[original_attr].dropna().nunique()
+            if hgv_size == 0:
+                continue
+
+            # Itera sobre cada valor na coluna generalizada para calcular 'h'
+            for value in generalized_df[gen_col_name]:
+                h = 1.0  # O padrão é 1 (nenhuma generalização ou valor nulo)
+                
+                if pd.notna(value):
+                    # Lógica para calcular 'h' para IDADE
+                    if original_attr == 'idadeCaso':
+                        # Se for um intervalo como "20-29"
+                        if isinstance(value, str) and '-' in value:
+                            try:
+                                parts = value.split('-')
+                                h = float(parts[1]) - float(parts[0]) + 1
+                            except (ValueError, IndexError):
+                                h = 1.0 # Caso a string não seja um intervalo válido
+                    
+                    elif original_attr == 'dataNascimento':
+                        value_str = str(value)
+                        # Nível 2 (ano): h = número de dias no ano
+                        if len(value_str) == 4 and value_str.isdigit():
+                            year = int(value_str)
+                            h = 366 if calendar.isleap(year) else 365
+                        # Nível 1 (mês/ano): h = número de dias no mês
+                        elif len(value_str) == 7 and '/' in value_str:
+                            try:
+                                month, year = map(int, value_str.split('/'))
+                                h = calendar.monthrange(year, month)[1]
+                            except ValueError:
+                                h = 1.0
+                
+                # Soma a perda normalizada para esta célula
+                total_information_loss += (h / hgv_size)
+
+        # Calcula a perda média e a precisão final
+        average_loss = total_information_loss / (num_records * num_attributes)
+        precision = 1 - average_loss
+        
+        return precision
+
+def main():   
+    print('##### Construção de Hierarquia #######')
+    print('''
+        Instruções do programa:
+        1°: Escreva como você deseja os níveis de idade. O padrão é uma lista
+            com 5 níveis de generalização: [1, 5, 10, 20, 'all'], que define
+            o número de intervalos para cada nível.
+        2°: Escreva como você deseja os níveis de datas (0, 1 ou 2).
+        ''')
   
-  h.construct_hierarchy_attr(pattern, 'idadeCaso')
-  while True:
-    nivel = int(input('Defina a hierarquia desejada: '))
-    h.apply_hierarchy(level=int(nivel))
-main()
+    try:
+        df_original = pd.read_csv('dados_covid-ce_trab02.csv', encoding='latin-1')
+    except FileNotFoundError:
+        print("Erro: O arquivo 'dados_covid-ce_trab02.csv' não foi encontrado.")
+        return
+
+    while True:
+        print("###############################################################")
+        print("##################### PROGRAMA  ###############################")
+        print("1 - Gerar arquivo com generalização")
+        print("x - Sair")
+        opcao = input("Digite sua opção: ") 
+    
+        if opcao == '1':
+            try:
+                ni = int(input("Defina o nível de hierarquia para IDADE (ex: 1 a 4, 0 para original): "))
+                nd = int(input("Defina o nível de hierarquia para DATA (0: d/m/a, 1: m/a, 2: a): "))
+            except ValueError:
+                print("Entrada inválida. Por favor, digite números inteiros.")
+                continue
+            
+            h = Hierarchy(df_original, ni, nd)
+            pattern = [1, 5, 10, 20, 'all']
+            print("Construindo hierarquia de idade...")
+            h.construct_hierarchy_attr(pattern, 'idadeCaso')
+            
+            print("Aplicando generalização de idade...")
+            generalized_age = h.apply_age_hierarchy()
+            
+            print("Aplicando generalização de data...")
+            generalized_date = h.apply_date_hierarchy()
+
+            if generalized_age is not None and generalized_date is not None:
+                df_publish = pd.concat([generalized_age, generalized_date], axis=1)
+                
+                output_filename = rf'data\Dt_{ni}_{nd}.csv'
+                df_publish.to_csv(output_filename, index=False)
+                print(f"\nArquivo salvo com sucesso em: {output_filename}")
+
+                # #############################################################
+                # ############# CHAMADA DA NOVA FUNÇÃO E PRINT ################
+                # #############################################################
+                precision_score = h.calculate_precision(df_publish)
+                print(f"Nível de Precisão (Precision) dos dados generalizados: {precision_score:.4f}")
+                print("(Quanto mais perto de 1.0, menor a perda de informação)")
+                # #############################################################
+
+        elif opcao.lower() == 'x':
+            print("Saindo do programa.")
+            break
+        else:
+            print("Opção inválida. Tente novamente.")
+
+if __name__ == "__main__":
+    main()
