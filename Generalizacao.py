@@ -10,6 +10,14 @@ class Hierarchy:
         self.set_quantity_levels = 5
         self.control_structure = False
 
+    def chamada(self):
+        print("Digite: 1 para Sim e 0 para Não")
+        idade = float(input("Deseja generalizar idade"))
+        data = float(input("Deseja generalizar data de Nascimento"))
+        if idade == 1:
+            pass
+        if data == 1:
+            Hierarchy.generalizar()
 
     def construct_hierarchy_attr(self, definitions_levels : list ,column_name: str) -> None:
         self.set_quantity_levels = len(definitions_levels)
@@ -114,6 +122,50 @@ class Hierarchy:
         else:
             print('Nível inválido, você deve setar uma nova hierarquia')    
         column_df.to_csv(rf'data\Data_n_{level}.csv')
+
+    def generalizar(self):
+
+        print("Informe a porcentagem de cada nível de generalização (total deve somar 100%)")
+        n0 = float(input("Nível 0 (dia/mês/ano): "))
+        n1 = float(input("Nível 1 (mês/ano): "))
+        n2 = float(input("Nível 2 (ano): "))
+
+        # Verificar se realmente o total daa 100% do dataframe
+        total = n0 + n1 + n2
+        if total != 100:
+            print(f"❌ A soma deve ser 100%, mas foi {total}%. Tente novamente.")
+            return
+
+        # Calcula o número de linhas para cada nível
+        n = len(df)
+        line_n0 = int(n * n0 / 100)
+        line_n1 = int(n * n1 / 100)
+        line_n2 = n - line_n0 - line_n1 # Calculate line_n2 to account for potential rounding issues
+
+        #Cria um index para classificar o nivel de acordo com a quantidade de linhas que é preciso.
+        index0 = df.index[:line_n0]#Totas as linhas até a quantidade de linhas de nivel0
+        index1 = df.index[line_n0:line_n0+line_n1]#A partir do line_n0 preenche com o nivel 1 até o line_n0+line_n1
+        index2 = df.index[line_n0+line_n1:line_n0+line_n1+line_n2]#Todas as linhas após line_n0 + line_n1, preenche com o nivel2
+
+        # Aplica as generalizações com base no index
+        valn0 = df.loc[index0, 'dataNascimento'].dt.strftime('%d/%m/%Y') #Localiza as linhas com o index do nivel 0 e aplica a generalização dia/mês/ano
+        valn1 = df.loc[index1, 'dataNascimento'].dt.strftime('%m/%Y') #Localiza as linhas com o index do nivel 1 e aplica a generalização mês/ano
+        valn2 = df.loc[index2, 'dataNascimento'].dt.strftime('%Y') ##Localiza as linhas com o index do nivel 2 e aplica a generalização ano
+
+        # 2. Passar a coluna para 'object' para aceitar as strings
+        df['data_gen'] = pd.Series(dtype=object)
+
+        # 3. Realizar a alteração na coluna (atribuindo as strings)
+        df.loc[index0, 'data_gen'] = valn0
+        df.loc[index1, 'data_gen'] = valn1
+        df.loc[index2, 'data_gen'] = valn2
+
+        print("\n✅ Generalização aplicada com sucesso!")
+        print(f"- Nível 0: {line_n0} linhas ({n0}%)")
+        print(f"- Nível 1: {line_n1} linhas ({n1}%)")
+        print(f"- Nível 2: {line_n2} linhas ({n2}%)")
+        return df
+    
 def main():   
  
 
