@@ -199,12 +199,10 @@ class Hierarchy:
             if hgv_size == 0:
                 continue
 
-            # Itera sobre cada valor na coluna generalizada para calcular 'h'
             for value in generalized_df[gen_col_name]:
                 h = 1.0  # O padrão é 1 (nenhuma generalização ou valor nulo)
                 
                 if pd.notna(value):
-                    # Lógica para calcular 'h' para IDADE
                     if original_attr == 'idadeCaso':
                         # Se for um intervalo como "20-29"
                         if isinstance(value, str) and '-' in value:
@@ -286,13 +284,10 @@ def main():
                 df_publish.to_csv(output_filename, index=False)
                 print(f"\nArquivo salvo com sucesso em: {output_filename}")
 
-                # #############################################################
-                # ############# CHAMADA DA NOVA FUNÇÃO E PRINT ################
-                # #############################################################
+             
                 precision_score = h.calculate_precision(df_publish)
                 print(f"Nível de Precisão (Precision) dos dados generalizados: {precision_score:.4f}")
                 print("(Quanto mais perto de 1.0, menor a perda de informação)")
-                # #############################################################
 
         elif opcao.lower() == 'x':
             print("Saindo do programa.")
