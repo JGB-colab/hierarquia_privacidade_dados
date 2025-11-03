@@ -12,12 +12,11 @@ class Hierarchy:
             ni (int): O nível de hierarquia desejado para o atributo numérico (idade).
             nd (int): O nível de hierarquia desejado para o atributo de data.
         """
-        self.df = dataframe.copy() # Usar uma cópia para evitar modificar o original
+        self.df = dataframe.copy()
         self.ni = ni
         self.nd = nd
         self.root = r'data'
         self.json_file = 'levels.json'
-        self.set_quantity_levels = 0
 
     def construct_hierarchy_attr(self, definitions_levels: list, column_name: str) -> None:
         """
@@ -137,14 +136,13 @@ class Hierarchy:
             
             found = False
             for interval in intervals:
-                # O valor precisa ser tratado como numérico para comparação
                 if interval[0] <= float(value) <= interval[1]:
-                    generalized_column.append(f"{interval[0]}-{interval[1]}") # Formata como string para clareza
+                    generalized_column.append(f"{interval[0]}-{interval[1]}")
                     found = True
                     break
             
             if not found:
-                generalized_column.append('Fora do intervalo') # Caso um valor não se encaixe em nenhum intervalo
+                generalized_column.append('Fora do intervalo')
 
         return pd.Series(generalized_column, name=f"{column_name}_gen_n{level}")
 
